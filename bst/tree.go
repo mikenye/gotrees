@@ -457,6 +457,17 @@ func (t *Tree[K, V, M]) Min(n *Node[K, V, M]) *Node[K, V, M] {
 	return n
 }
 
+// MustSetMetadata updates the metadata of the given node n.
+//
+// This function allows modification of the metadata field, which can be used
+// for storing auxiliary information such as node color (for Red-Black Trees),
+// balance factors (for AVL Trees), or other user-defined data.
+//
+// No nil checks are performed. If the node is nil, the function will panic.
+func (t *Tree[K, V, M]) MustSetMetadata(n *Node[K, V, M], metadata M) {
+	n.metadata = metadata
+}
+
 // Parent returns the parent of the given node n.
 //
 // If n is the root, it returns the tree's sentinel nil node.
@@ -611,7 +622,9 @@ func (t *Tree[K, V, M]) Search(key K) (*Node[K, V, M], bool) {
 // for storing auxiliary information such as node color (for Red-Black Trees),
 // balance factors (for AVL Trees), or other user-defined data.
 func (t *Tree[K, V, M]) SetMetadata(n *Node[K, V, M], metadata M) {
-	n.metadata = metadata
+	if n != nil && !t.IsNil(n) {
+		n.metadata = metadata
+	}
 }
 
 // Sibling returns the sibling of the given node n.

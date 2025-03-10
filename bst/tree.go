@@ -114,41 +114,14 @@ func New[K, V, M any](less LessFunc[K]) *Tree[K, V, M] {
 		less: less,
 		nil:  &Node[K, V, M]{},
 	}
-	t.root = t.nil
-	t.root.parent = t.nil
+	t.SetRoot(t.nil)
+	t.SetParent(t.root, t.Sentinel())
 	return t
 }
 
 // keyEq is a helper function that performs an equality check between keys using the LessFunc function.
 func (t *Tree[K, V, M]) keyEq(a, b K) bool {
 	return !t.less(a, b) && !t.less(b, a)
-}
-
-// transplant replaces node "toReplace" with node "replacement"
-func (t *Tree[K, V, M]) transplant(toReplace, replacement *Node[K, V, M]) {
-
-	// perform transplant
-	if toReplace.parent == t.nil {
-
-		// if old node has nil parent, then it was the root
-		t.root = replacement // update the root to replacement
-
-	} else if toReplace == toReplace.parent.left {
-
-		// if the old node is a left child, replace its parent's left child
-		toReplace.parent.left = replacement // update the node to replacement
-
-	} else {
-
-		// else, it was a right child, replace its parent's right child
-		toReplace.parent.right = replacement // update the node to replacement
-
-	}
-
-	// set replacement's parent to node's parent
-	if replacement != t.nil {
-		replacement.parent = toReplace.parent
-	}
 }
 
 // Contains checks whether the given node n is present in the tree.
@@ -170,9 +143,6 @@ func (t *Tree[K, V, M]) Contains(n *Node[K, V, M]) bool {
 // If the deletion is successful, it returns the replacement node (if any) and true.
 // If the node does not exist or is nil, it returns the tree's sentinel nil node and false.
 //
-// Metadata from the deleted node is transferred to its replacement node to ensure
-// consistency when extending the tree (e.g., for Red-Black Trees or AVL Trees).
-//
 // The deletion process follows standard BST deletion rules:
 //   - If n has no left child, it is replaced by its right child.
 //   - If n has no right child, it is replaced by its left child.
@@ -185,39 +155,30 @@ func (t *Tree[K, V, M]) Delete(n *Node[K, V, M]) (*Node[K, V, M], bool) {
 
 	// if nil input, don't delete anything and give nil output
 	if t.IsNil(n) || n == nil {
-		return t.nil, false
+		return t.Sentinel(), false
 	}
 
-	if n.left == t.nil {
-		replacement := n.right
-		t.transplant(n, n.right)
-		if replacement != t.nil {
-			t.SetMetadata(replacement, n.metadata)
-		}
+	if t.IsNil(t.Left(n)) {
+		replacement := t.Right(n)
+		t.Transplant(n, t.Right(n))
 		return replacement, true
 
-	} else if n.right == t.nil {
-		replacement := n.left
-		t.transplant(n, n.left)
-		if replacement != t.nil {
-			t.SetMetadata(replacement, n.metadata)
-		}
+	} else if t.IsNil(t.Right(n)) {
+		replacement := t.Left(n)
+		t.Transplant(n, t.Left(n))
 		return replacement, true
 
 	} else {
-		successor := t.Min(n.right)
+		successor := t.Min(t.Right(n))
 		replacement := successor
-		if successor.parent != n {
-			t.transplant(successor, successor.right)
-			successor.right = n.right
-			successor.right.parent = successor
+		if t.Parent(successor) != n {
+			t.Transplant(successor, t.Right(successor))
+			t.SetRight(successor, t.Right(n))
+			t.SetParent(t.Right(successor), successor)
 		}
-		t.transplant(n, successor)
-		successor.left = n.left
-		successor.left.parent = successor
-		if replacement != t.nil {
-			t.SetMetadata(replacement, n.metadata)
-		}
+		t.Transplant(n, successor)
+		t.SetLeft(successor, t.Left(n))
+		t.SetParent(t.Left(successor), successor)
 		return replacement, true
 	}
 }
@@ -231,9 +192,9 @@ func (t *Tree[K, V, M]) Delete(n *Node[K, V, M]) (*Node[K, V, M], bool) {
 // Calling it on an arbitrary node could lead to undefined behavior. See Tree.Contains.
 func (t *Tree[K, V, M]) Depth(n *Node[K, V, M]) int {
 	h := 0
-	for !t.IsNil(n.parent) {
+	for !t.IsNil(t.Parent(n)) {
 		h++
-		n = n.parent
+		n = t.Parent(n)
 	}
 	return h
 }
@@ -256,8 +217,8 @@ func (t *Tree[K, V, M]) Depth(n *Node[K, V, M]) int {
 //   - (*Node[K, V, M], false) if a new node was inserted.
 func (t *Tree[K, V, M]) Insert(key K, value V) (*Node[K, V, M], bool) {
 
-	parent := t.nil      // trailing pointer - parent of current node
-	currNode := t.Root() // current node
+	parent := t.Sentinel() // trailing pointer - parent of current node
+	currNode := t.Root()   // current node
 
 	// find nil leaf where new node will be inserted
 	for !t.IsNil(currNode) {
@@ -265,21 +226,21 @@ func (t *Tree[K, V, M]) Insert(key K, value V) (*Node[K, V, M], bool) {
 		// update trailing pointer
 		parent = currNode
 
-		if t.keyEq(currNode.key, key) {
+		if t.keyEq(t.Key(currNode), key) {
 
 			// If key already exists, update the value
 			currNode.value = value
 			return currNode, true
 
-		} else if t.less(key, currNode.key) {
+		} else if t.less(key, t.Key(currNode)) {
 
 			// If key is smaller, go left
-			currNode = currNode.left
+			currNode = t.Left(currNode)
 
 		} else {
 
 			// If key is larger, go right
-			currNode = currNode.right
+			currNode = t.Right(currNode)
 		}
 	}
 
@@ -288,24 +249,24 @@ func (t *Tree[K, V, M]) Insert(key K, value V) (*Node[K, V, M], bool) {
 		key:    key,
 		value:  value,
 		parent: parent,
-		left:   t.nil,
-		right:  t.nil,
+		left:   t.Sentinel(),
+		right:  t.Sentinel(),
 	}
 
-	if parent == t.nil {
+	if t.IsNil(parent) {
 
 		// If the tree was empty, set root
-		t.root = newNode
+		t.SetRoot(newNode)
 
-	} else if t.less(key, parent.key) {
+	} else if t.less(key, t.Key(parent)) {
 
 		// if the key is less than the parent key, insert new node as left child
-		parent.left = newNode
+		t.SetLeft(parent, newNode)
 
 	} else {
 
 		// if the key is greater than the parent key, insert new node as right child
-		parent.right = newNode
+		t.SetRight(parent, newNode)
 	}
 
 	return newNode, false
@@ -315,7 +276,7 @@ func (t *Tree[K, V, M]) Insert(key K, value V) (*Node[K, V, M], bool) {
 //
 // A full node is one that has exactly two children.
 func (t *Tree[K, V, M]) IsFull(n *Node[K, V, M]) bool {
-	return n.left != t.nil && n.right != t.nil
+	return !t.IsNil(t.Left(n)) && !t.IsNil(t.Right(n))
 }
 
 // IsInternal returns true if the given node `n` is an internal node,
@@ -323,7 +284,7 @@ func (t *Tree[K, V, M]) IsFull(n *Node[K, V, M]) bool {
 //
 // Internal nodes are non-leaf nodes that contribute to the tree structure.
 func (t *Tree[K, V, M]) IsInternal(n *Node[K, V, M]) bool {
-	return n.left != t.nil || n.right != t.nil
+	return !t.IsNil(t.Left(n)) || !t.IsNil(t.Right(n))
 }
 
 // IsLeaf returns true if the given node `n` has no children,
@@ -331,14 +292,14 @@ func (t *Tree[K, V, M]) IsInternal(n *Node[K, V, M]) bool {
 //
 // A leaf node is a terminal node in the tree.
 func (t *Tree[K, V, M]) IsLeaf(n *Node[K, V, M]) bool {
-	return n.left == t.nil && n.right == t.nil
+	return t.IsNil(t.Left(n)) && t.IsNil(t.Right(n))
 }
 
 // IsNil returns true if the given node `n` is the tree's sentinel nil node.
 //
 // The nil node is used to represent the absence of a real node in the tree.
 func (t *Tree[K, V, M]) IsNil(n *Node[K, V, M]) bool {
-	return n == t.nil
+	return n == nil || n == t.Sentinel()
 }
 
 // IsUnary returns true if the given node `n` has exactly one child
@@ -346,7 +307,7 @@ func (t *Tree[K, V, M]) IsNil(n *Node[K, V, M]) bool {
 //
 // This is determined using a logical XOR operation on the child checks.
 func (t *Tree[K, V, M]) IsUnary(n *Node[K, V, M]) bool {
-	return (n.left == t.nil) != (n.right == t.nil) // Logical XOR
+	return t.IsNil(t.Left(n)) != t.IsNil(t.Right(n)) // Logical XOR
 }
 
 // IsTreeValid performs structural validation of the tree.
@@ -431,7 +392,7 @@ func (t *Tree[K, V, M]) Left(n *Node[K, V, M]) *Node[K, V, M] {
 // This function traverses to the rightmost node of the subtree.
 // If n is nil or the subtree is empty, it returns n.
 func (t *Tree[K, V, M]) Max(n *Node[K, V, M]) *Node[K, V, M] {
-	for n.right != nil && n.right != t.nil {
+	for !t.IsNil(t.Right(n)) {
 		n = n.right
 	}
 	return n
@@ -451,7 +412,7 @@ func (t *Tree[K, V, M]) Metadata(n *Node[K, V, M]) M {
 // This function traverses to the leftmost node of the subtree.
 // If n is nil or the subtree is empty, it returns n.
 func (t *Tree[K, V, M]) Min(n *Node[K, V, M]) *Node[K, V, M] {
-	for n.left != nil && n.left != t.nil {
+	for !t.IsNil(t.Left(n)) {
 		n = n.left
 	}
 	return n
@@ -481,13 +442,13 @@ func (t *Tree[K, V, M]) Parent(n *Node[K, V, M]) *Node[K, V, M] {
 // If n has no left subtree, it moves up the tree until it finds a parent
 // where n is in the right subtree. If no predecessor exists, it returns the sentinel nil node.
 func (t *Tree[K, V, M]) Predecessor(n *Node[K, V, M]) *Node[K, V, M] {
-	if n.left != t.nil {
-		return t.Max(n.left)
+	if !t.IsNil(t.Left(n)) {
+		return t.Max(t.Left(n))
 	}
-	p := n.parent
-	for p != t.nil && n != p.right {
+	p := t.Parent(n)
+	for !t.IsNil(p) && n != t.Right(p) {
 		n = p
-		p = p.parent
+		p = t.Parent(p)
 	}
 	return p
 }
@@ -616,15 +577,50 @@ func (t *Tree[K, V, M]) Search(key K) (*Node[K, V, M], bool) {
 	return t.nil, false
 }
 
+// todo: doc comments
+func (t *Tree[K, V, M]) Sentinel() *Node[K, V, M] {
+	return t.nil
+}
+
+// todo: doc comments + warning - use only when extending the tree
+func (t *Tree[K, V, M]) SetKey(n *Node[K, V, M], key K) {
+	n.key = key
+}
+
+// todo: doc comments + warning - use only when extending the tree
+func (t *Tree[K, V, M]) SetLeft(n, l *Node[K, V, M]) {
+	n.left = l
+}
+
 // SetMetadata updates the metadata of the given node n.
 //
 // This function allows modification of the metadata field, which can be used
 // for storing auxiliary information such as node color (for Red-Black Trees),
 // balance factors (for AVL Trees), or other user-defined data.
 func (t *Tree[K, V, M]) SetMetadata(n *Node[K, V, M], metadata M) {
-	if n != nil && !t.IsNil(n) {
+	if !t.IsNil(n) {
 		n.metadata = metadata
 	}
+}
+
+// todo: doc comments + warning - use only when extending the tree
+func (t *Tree[K, V, M]) SetParent(n, p *Node[K, V, M]) {
+	n.parent = p
+}
+
+// todo: doc comments + warning - use only when extending the tree
+func (t *Tree[K, V, M]) SetRight(n, r *Node[K, V, M]) {
+	n.right = r
+}
+
+// todo: doc comments + warning - use only when extending the tree
+func (t *Tree[K, V, M]) SetRoot(n *Node[K, V, M]) {
+	t.root = n
+}
+
+// todo: doc comments + warning - use only when extending the tree
+func (t *Tree[K, V, M]) SetValue(n *Node[K, V, M], value V) {
+	n.value = value
 }
 
 // Sibling returns the sibling of the given node n.
@@ -754,6 +750,34 @@ func (t *Tree[K, V, M]) Successor(n *Node[K, V, M]) *Node[K, V, M] {
 		p = p.parent
 	}
 	return p
+}
+
+// Transplant replaces node "toReplace" with node "replacement"
+// todo: doc comments + warning - use only when extending the tree
+func (t *Tree[K, V, M]) Transplant(toReplace, replacement *Node[K, V, M]) {
+
+	// perform transplant
+	if t.IsNil(t.Parent(toReplace)) {
+
+		// if old node has nil parent, then it was the root
+		t.SetRoot(replacement) // update the root to replacement
+
+	} else if toReplace == t.Left(t.Parent(toReplace)) {
+
+		// if the old node is a left child, replace its parent's left child
+		t.SetLeft(t.Parent(toReplace), replacement) // update the node to replacement
+
+	} else {
+
+		// else, it was a right child, replace its parent's right child
+		t.SetRight(t.Parent(toReplace), replacement) // update the node to replacement
+
+	}
+
+	// set replacement's parent to node's parent
+	if !t.IsNil(replacement) {
+		t.SetParent(replacement, t.Parent(toReplace))
+	}
 }
 
 // TraverseInOrder performs an in-order traversal of the tree starting from node n.

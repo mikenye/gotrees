@@ -29,29 +29,319 @@ func FuzzTree_Insert(f *testing.F) {
 	})
 }
 
-func TestTree_Insert_update(t *testing.T) {
-	keys := []int{11, 2, 14, 1, 7, 15, 5, 8, 4}
-	tree := New[int, string](func(a, b int) bool {
-		return a < b
-	})
-	for _, k := range keys {
-		tree.Insert(k, fmt.Sprintf("%d", k))
+func TestTree_Delete(t *testing.T) {
+	// todo: add structure checks
+	tests := map[string]struct {
+		keys     []int // in order of insert
+		deletion func(t *testing.T, tree *Tree[int, struct{}])
+		checks   func(t *testing.T, tree *Tree[int, struct{}])
+	}{
+		"left child delete, no fixup cases": {
+			keys: []int{14, 11, 69, 3, 12, 50, 82, 1, 4, 77},
+			deletion: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n1, _ := tree.Search(1)
+				ok := tree.Delete(n1)
+				require.True(t, ok)
+			},
+			checks: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n3, _ := tree.Search(3)
+				n4, _ := tree.Search(4)
+				assert.Equal(t, Black, tree.Metadata(n3), "expected node 3 to remain black")
+				assert.Equal(t, tree.Sentinel(), tree.Left(n3), "expected left child of node 3 to be sentinel after delete")
+				assert.Equal(t, n4, tree.Right(n3), "expected right child of node 3 to be node 4")
+				assert.Equal(t, Red, tree.Metadata(n4), "expected node 4 to remain red")
+			},
+		},
+		"successor transplant, fixup cases 3 & 4": {
+			keys: []int{14, 11, 69, 3, 12, 50, 82, 1, 4, 77},
+			deletion: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n1, _ := tree.Search(1)
+				tree.Delete(n1)
+				// no assertions for above deletions as this follows on from previous case(s) above
+				n11, _ := tree.Search(11)
+				ok := tree.Delete(n11)
+				require.True(t, ok)
+			},
+			checks: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n3, _ := tree.Search(3)
+				n4, _ := tree.Search(4)
+				n12, _ := tree.Search(12)
+
+				assert.Equal(t, n4, tree.Left(tree.Root()), "expected node 4 to be root left child")
+				assert.Equal(t, Red, tree.Metadata(n4), "expected node 4 to remain red")
+				assert.Equal(t, n3, tree.Left(n4), "expected left child of node 4 to be node 3")
+				assert.Equal(t, Black, tree.Metadata(n3), "expected node 3 to remain black")
+				assert.Equal(t, n12, tree.Right(n4), "expected right child of node 4 to be node 12")
+				assert.Equal(t, Black, tree.Metadata(n12), "expected node 12 to remain black")
+				assert.True(t, tree.IsLeaf(n3), "expected node 3 to be leaf")
+				assert.True(t, tree.IsLeaf(n12), "expected node 12 to be leaf")
+			},
+		},
+		"left child replacement, fixup case 2": {
+			keys: []int{14, 11, 69, 3, 12, 50, 82, 1, 4, 77},
+			deletion: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n1, _ := tree.Search(1)
+				tree.Delete(n1)
+				n11, _ := tree.Search(11)
+				tree.Delete(n11)
+				// no assertions for above deletions as this follows on from previous case(s) above
+				n12, _ := tree.Search(12)
+				ok := tree.Delete(n12)
+				require.True(t, ok)
+			},
+			checks: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n3, _ := tree.Search(3)
+				n4, _ := tree.Search(4)
+
+				assert.Equal(t, n4, tree.Left(tree.Root()), "expected node 4 to be root left child")
+				assert.Equal(t, Black, tree.Metadata(n4), "expected node 4 to change to black")
+				assert.Equal(t, n3, tree.Left(n4), "expected left child of node 4 to be node 3")
+				assert.Equal(t, Red, tree.Metadata(n3), "expected node 3 to change to red")
+				assert.Equal(t, tree.Sentinel(), tree.Right(n4), "expected right child of node 4 to be nil")
+				assert.True(t, tree.IsLeaf(n3), "expected node 3 to be leaf")
+			},
+		},
+		"successor transplant, no fixup": {
+			keys: []int{14, 11, 69, 3, 12, 50, 82, 1, 4, 77},
+			deletion: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n1, _ := tree.Search(1)
+				tree.Delete(n1)
+				n11, _ := tree.Search(11)
+				tree.Delete(n11)
+				n12, _ := tree.Search(12)
+				tree.Delete(n12)
+				// no assertions for above deletions as this follows on from previous case(s) above
+				n69, _ := tree.Search(69)
+				ok := tree.Delete(n69)
+				require.True(t, ok)
+			},
+			checks: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n50, _ := tree.Search(50)
+				n77, _ := tree.Search(77)
+				n82, _ := tree.Search(82)
+
+				assert.Equal(t, n77, tree.Right(tree.Root()), "expected node 77 to be root right child")
+				assert.Equal(t, Red, tree.Metadata(n77), "expected node 77 to be red")
+				assert.Equal(t, n50, tree.Left(n77), "expected left child of node 77 to be node 50")
+				assert.Equal(t, Black, tree.Metadata(n50), "expected node 50 to be black")
+				assert.Equal(t, n82, tree.Right(n77), "expected right child of node 77 to be node 82")
+				assert.Equal(t, Black, tree.Metadata(n82), "expected node 82 to be black")
+				assert.True(t, tree.IsLeaf(n50), "expected node 50 to be leaf")
+				assert.True(t, tree.IsLeaf(n82), "expected node 82 to be leaf")
+			},
+		},
+		"right child replacement, no fixup": {
+			keys: []int{14, 11, 69, 3, 12, 50, 82, 1, 4, 77},
+			deletion: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n1, _ := tree.Search(1)
+				tree.Delete(n1)
+				n11, _ := tree.Search(11)
+				tree.Delete(n11)
+				n12, _ := tree.Search(12)
+				tree.Delete(n12)
+				n69, _ := tree.Search(69)
+				tree.Delete(n69)
+				// no assertions for above deletions as this follows on from previous case(s) above
+				n4, _ := tree.Search(4)
+				ok := tree.Delete(n4)
+				require.True(t, ok)
+			},
+			checks: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n3, _ := tree.Search(3)
+
+				assert.Equal(t, n3, tree.Left(tree.Root()), "expected node 3 to be root left child")
+				assert.Equal(t, Black, tree.Metadata(n3), "expected node 3 to be black")
+				assert.True(t, tree.IsLeaf(n3), "expected node 3 to be leaf")
+			},
+		},
+		"root node with two children": {
+			keys: []int{14, 11, 69, 3, 12, 50, 82, 1, 4, 77},
+			deletion: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n1, _ := tree.Search(1)
+				tree.Delete(n1)
+				n11, _ := tree.Search(11)
+				tree.Delete(n11)
+				n12, _ := tree.Search(12)
+				tree.Delete(n12)
+				n69, _ := tree.Search(69)
+				tree.Delete(n69)
+				n4, _ := tree.Search(4)
+				tree.Delete(n4)
+				// no assertions for above deletions as this follows on from previous case(s) above
+				n14, _ := tree.Search(14)
+				ok := tree.Delete(n14)
+				require.True(t, ok)
+			},
+			checks: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n50, _ := tree.Search(50)
+				n3, _ := tree.Search(3)
+				n77, _ := tree.Search(77)
+				n82, _ := tree.Search(82)
+
+				assert.Equal(t, tree.Root(), n50, "expected node 50 to be new tree root")
+				assert.Equal(t, n3, tree.Left(tree.Root()), "expected node 3 to be root left child")
+				assert.Equal(t, Black, tree.Metadata(n3), "expected node 3 to be black")
+				assert.True(t, tree.IsLeaf(n3), "expected node 3 to be leaf")
+				assert.Equal(t, n77, tree.Right(tree.Root()), "expected node 77 to be root right child")
+				assert.Equal(t, Black, tree.Metadata(n77), "expected node 77 to be black")
+				assert.Equal(t, tree.Sentinel(), tree.Left(n77), "expected node 77 left child to be nil")
+				assert.Equal(t, n82, tree.Right(n77), "expected node 77 right child to be node 82")
+				assert.True(t, tree.IsLeaf(n82), "expected node 82 to be leaf")
+				assert.Equal(t, Red, tree.Metadata(n82), "expected node 77 to be black")
+			},
+		},
+		"right child delete, no fixup": {
+			keys: []int{14, 11, 69, 3, 12, 50, 82, 1, 4, 77},
+			deletion: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n1, _ := tree.Search(1)
+				tree.Delete(n1)
+				n11, _ := tree.Search(11)
+				tree.Delete(n11)
+				n12, _ := tree.Search(12)
+				tree.Delete(n12)
+				n69, _ := tree.Search(69)
+				tree.Delete(n69)
+				n4, _ := tree.Search(4)
+				tree.Delete(n4)
+				n14, _ := tree.Search(14)
+				tree.Delete(n14)
+				// no assertions for above deletions as this follows on from previous case(s) above
+				n82, _ := tree.Search(82)
+				ok := tree.Delete(n82)
+				require.True(t, ok)
+			},
+			checks: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n50, _ := tree.Search(50)
+				n3, _ := tree.Search(3)
+				n77, _ := tree.Search(77)
+
+				assert.Equal(t, tree.Root(), n50, "expected node 50 to be tree root")
+				assert.Equal(t, n3, tree.Left(tree.Root()), "expected node 3 to be root left child")
+				assert.Equal(t, Black, tree.Metadata(n3), "expected node 3 to be black")
+				assert.True(t, tree.IsLeaf(n3), "expected node 3 to be leaf")
+				assert.Equal(t, n77, tree.Right(tree.Root()), "expected node 77 to be root right child")
+				assert.Equal(t, Black, tree.Metadata(n77), "expected node 77 to be black")
+				assert.True(t, tree.IsLeaf(n77), "expected node 77 to be leaf")
+			},
+		},
+		"root delete, fixup case 2": {
+			keys: []int{14, 11, 69, 3, 12, 50, 82, 1, 4, 77},
+			deletion: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n1, _ := tree.Search(1)
+				tree.Delete(n1)
+				n11, _ := tree.Search(11)
+				tree.Delete(n11)
+				n12, _ := tree.Search(12)
+				tree.Delete(n12)
+				n69, _ := tree.Search(69)
+				tree.Delete(n69)
+				n4, _ := tree.Search(4)
+				tree.Delete(n4)
+				n14, _ := tree.Search(14)
+				tree.Delete(n14)
+				n82, _ := tree.Search(82)
+				tree.Delete(n82)
+				// no assertions for above deletions as this follows on from previous case(s) above
+				n50, _ := tree.Search(50)
+				ok := tree.Delete(n50)
+				require.True(t, ok)
+			},
+			checks: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n3, _ := tree.Search(3)
+				n77, _ := tree.Search(77)
+
+				assert.Equal(t, tree.Root(), n77, "expected node 77 to be tree root")
+				assert.Equal(t, n3, tree.Left(tree.Root()), "expected node 3 to be root left child")
+				assert.Equal(t, Red, tree.Metadata(n3), "expected node 3 to be black")
+				assert.True(t, tree.IsLeaf(n3), "expected node 3 to be leaf")
+				assert.Equal(t, tree.Sentinel(), tree.Right(tree.Root()), "expected root right child to be nil")
+			},
+		},
+		"root node with one child, no fixup": {
+			keys: []int{14, 11, 69, 3, 12, 50, 82, 1, 4, 77},
+			deletion: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n1, _ := tree.Search(1)
+				tree.Delete(n1)
+				n11, _ := tree.Search(11)
+				tree.Delete(n11)
+				n12, _ := tree.Search(12)
+				tree.Delete(n12)
+				n69, _ := tree.Search(69)
+				tree.Delete(n69)
+				n4, _ := tree.Search(4)
+				tree.Delete(n4)
+				n14, _ := tree.Search(14)
+				tree.Delete(n14)
+				n82, _ := tree.Search(82)
+				tree.Delete(n82)
+				n50, _ := tree.Search(50)
+				tree.Delete(n50)
+				// no assertions for above deletions as this follows on from previous case(s) above
+				n77, _ := tree.Search(77)
+				ok := tree.Delete(n77)
+				require.True(t, ok)
+			},
+			checks: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n3, _ := tree.Search(3)
+
+				assert.Equal(t, tree.Root(), n3, "expected node 77 to be tree root")
+				assert.True(t, tree.IsLeaf(n3), "expected node 3 to be leaf")
+			},
+		},
+		"root node with no children, no fixup": {
+			keys: []int{14, 11, 69, 3, 12, 50, 82, 1, 4, 77},
+			deletion: func(t *testing.T, tree *Tree[int, struct{}]) {
+				n1, _ := tree.Search(1)
+				tree.Delete(n1)
+				n11, _ := tree.Search(11)
+				tree.Delete(n11)
+				n12, _ := tree.Search(12)
+				tree.Delete(n12)
+				n69, _ := tree.Search(69)
+				tree.Delete(n69)
+				n4, _ := tree.Search(4)
+				tree.Delete(n4)
+				n14, _ := tree.Search(14)
+				tree.Delete(n14)
+				n82, _ := tree.Search(82)
+				tree.Delete(n82)
+				n50, _ := tree.Search(50)
+				tree.Delete(n50)
+				n77, _ := tree.Search(77)
+				tree.Delete(n77)
+				// no assertions for above deletions as this follows on from previous case(s) above
+				n3, _ := tree.Search(3)
+				ok := tree.Delete(n3)
+				require.True(t, ok)
+			},
+			checks: func(t *testing.T, tree *Tree[int, struct{}]) {
+				assert.Equal(t, tree.Sentinel(), tree.Root(), "expected empty tree")
+			},
+		},
 	}
-	t.Logf("rbtree:\n%s", tree)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// build tree from keys
+			tree := New[int, struct{}](func(a, b int) bool { return a < b })
+			for _, k := range tc.keys {
+				tree.Insert(k, struct{}{})
+			}
+			t.Logf("rbtree before delete:\n%s", tree)
+			require.NoError(t, tree.IsTreeValid(), "tree should be valid")
 
-	// underlying bst should be valid
-	require.NoError(t, tree.IsTreeValid(), "tree should be valid")
+			// perform deletion
+			tc.deletion(t, tree)
+			t.Logf("rbtree after delete:\n%s", tree)
+			require.NoError(t, tree.IsTreeValid(), "tree should be valid")
 
-	n4, _ := tree.Search(4)
-	require.Equal(t, "4", tree.Value(n4))
-
-	// update node 4
-	tree.Insert(4, "updated")
-	assert.Equal(t, "updated", tree.Value(n4))
+			// remaining checks
+			tc.checks(t, tree)
+		})
+	}
 }
 
 func TestTree_Insert_fixup_cases(t *testing.T) {
-
+	// todo: add structure checks
 	tests := map[string]struct {
 		keys   []int // in order of insert
 		checks func(t *testing.T, tree *Tree[int, struct{}])
@@ -96,6 +386,27 @@ func TestTree_Insert_fixup_cases(t *testing.T) {
 		})
 
 	}
+}
+
+func TestTree_Insert_update(t *testing.T) {
+	keys := []int{11, 2, 14, 1, 7, 15, 5, 8, 4}
+	tree := New[int, string](func(a, b int) bool {
+		return a < b
+	})
+	for _, k := range keys {
+		tree.Insert(k, fmt.Sprintf("%d", k))
+	}
+	t.Logf("rbtree:\n%s", tree)
+
+	// underlying bst should be valid
+	require.NoError(t, tree.IsTreeValid(), "tree should be valid")
+
+	n4, _ := tree.Search(4)
+	require.Equal(t, "4", tree.Value(n4))
+
+	// update node 4
+	tree.Insert(4, "updated")
+	assert.Equal(t, "updated", tree.Value(n4))
 }
 
 func TestTree_IsTreeValid(t *testing.T) {
@@ -221,17 +532,28 @@ func TestTree_IsTreeValid(t *testing.T) {
 
 func TestTree_panics(t *testing.T) {
 	tree := New[int, struct{}](func(a, b int) bool { return a < b })
-	root, _ := tree.Insert(10, struct{}{})
 	assert.Panics(t, func() {
-		tree.MustSetMetadata(root, Red)
+		tree.MustSetMetadata()
 	})
 	assert.Panics(t, func() {
-		tree.SetMetadata(root, Red)
+		tree.SetMetadata()
 	})
 	assert.Panics(t, func() {
-		tree.RotateLeft(root)
+		tree.RotateLeft()
 	})
 	assert.Panics(t, func() {
-		tree.RotateRight(root)
+		tree.RotateRight()
+	})
+	assert.Panics(t, func() {
+		tree.SetLeft()
+	})
+	assert.Panics(t, func() {
+		tree.SetParent()
+	})
+	assert.Panics(t, func() {
+		tree.SetRight()
+	})
+	assert.Panics(t, func() {
+		tree.Transplant()
 	})
 }

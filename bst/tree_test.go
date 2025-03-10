@@ -204,29 +204,26 @@ func TestTree_Max(t *testing.T) {
 
 func TestTree_Delete(t *testing.T) {
 	tests := map[string]struct {
-		creation func() *Tree[int, string, string]
-		deletion func(*Tree[int, string, string])
-		checks   func(*Tree[int, string, string])
+		creation func() *Tree[int, string, struct{}]
+		deletion func(*Tree[int, string, struct{}])
+		checks   func(*Tree[int, string, struct{}])
 	}{
 		"nil node": {
-			creation: func() *Tree[int, string, string] {
+			creation: func() *Tree[int, string, struct{}] {
 				// create right-leaning tree
-				tree := New[int, string, string](func(a, b int) bool {
+				tree := New[int, string, struct{}](func(a, b int) bool {
 					return a < b
 				})
-				n, _ := tree.Insert(20, "z")
-				tree.SetMetadata(n, "originally z")
-				n, _ = tree.Insert(10, "l")
-				tree.SetMetadata(n, "originally l")
-				n, _ = tree.Insert(30, "y")
-				tree.SetMetadata(n, "originally y")
+				tree.Insert(20, "z")
+				tree.Insert(10, "l")
+				tree.Insert(30, "y")
 				return tree
 			},
-			deletion: func(tree *Tree[int, string, string]) {
+			deletion: func(tree *Tree[int, string, struct{}]) {
 				_, deleted := tree.Delete(nil)
 				require.False(t, deleted, "expected nil node to not be deleted")
 			},
-			checks: func(tree *Tree[int, string, string]) {
+			checks: func(tree *Tree[int, string, struct{}]) {
 				assert.Equal(t, tree.nil, tree.Parent(tree.Root()), "unexpected structure after delete")
 				assert.Equal(t, 20, tree.Key(tree.Root()), "unexpected structure after delete")
 				assert.Equal(t, 10, tree.Key(tree.Left(tree.Root())), "unexpected structure after delete")
@@ -234,87 +231,75 @@ func TestTree_Delete(t *testing.T) {
 			},
 		},
 		"node is root and has no left child": {
-			creation: func() *Tree[int, string, string] {
+			creation: func() *Tree[int, string, struct{}] {
 				// create right-leaning tree
-				tree := New[int, string, string](func(a, b int) bool {
+				tree := New[int, string, struct{}](func(a, b int) bool {
 					return a < b
 				})
-				n, _ := tree.Insert(10, "z")
-				tree.SetMetadata(n, "originally z")
-				n, _ = tree.Insert(20, "r")
-				tree.SetMetadata(n, "originally r")
+				tree.Insert(10, "z")
+				tree.Insert(20, "r")
 				return tree
 			},
-			deletion: func(tree *Tree[int, string, string]) {
+			deletion: func(tree *Tree[int, string, struct{}]) {
 				// delete root node
 				n, found := tree.Search(10)
 				require.True(t, found, "expected to find node to be deleted")
 				_, deleted := tree.Delete(n)
 				require.True(t, deleted, "expected node to be deleted")
 			},
-			checks: func(tree *Tree[int, string, string]) {
+			checks: func(tree *Tree[int, string, struct{}]) {
 				// ensure structure as expected
 				assert.True(t, tree.IsNil(tree.Parent(tree.Root())), "expected root node parent to be nil")
 				assert.True(t, tree.IsNil(tree.Left(tree.Root())), "expected root left child to be nil")
 				assert.True(t, tree.IsNil(tree.Right(tree.Root())), "expected root right child to be nil")
-				// ensure transplant worked as expected
+				// ensure Transplant worked as expected
 				assert.Equal(t, 20, tree.Key(tree.Root()), "unexpected root node key after deletion")
 				assert.Equal(t, "r", tree.Value(tree.Root()), "unexpected root node value after deletion")
-				// ensure node metadata has not changed
-				assert.Equal(t, "originally z", tree.Metadata(tree.Root()), "unexpected root node key after deletion")
 			},
 		},
 		"node is root and has a left child but no right child": {
-			creation: func() *Tree[int, string, string] {
-				tree := New[int, string, string](func(a, b int) bool {
+			creation: func() *Tree[int, string, struct{}] {
+				tree := New[int, string, struct{}](func(a, b int) bool {
 					return a < b
 				})
-				n, _ := tree.Insert(10, "z")
-				tree.SetMetadata(n, "originally z")
-				n, _ = tree.Insert(5, "l")
-				tree.SetMetadata(n, "originally l")
+				tree.Insert(10, "z")
+				tree.Insert(5, "l")
 				return tree
 			},
-			deletion: func(tree *Tree[int, string, string]) {
+			deletion: func(tree *Tree[int, string, struct{}]) {
 				n, found := tree.Search(10)
 				require.True(t, found, "expected to find node to be deleted")
 				_, deleted := tree.Delete(n)
 				require.True(t, deleted, "expected node to be deleted")
 			},
-			checks: func(tree *Tree[int, string, string]) {
+			checks: func(tree *Tree[int, string, struct{}]) {
 				// ensure structure as expected
 				assert.True(t, tree.IsNil(tree.Parent(tree.Root())), "expected root node parent to be nil")
 				assert.True(t, tree.IsNil(tree.Left(tree.Root())), "expected root left child to be nil")
 				assert.True(t, tree.IsNil(tree.Right(tree.Root())), "expected root right child to be nil")
-				// ensure transplant worked as expected
+				// ensure Transplant worked as expected
 				assert.Equal(t, 5, tree.Key(tree.Root()), "unexpected root node key after deletion")
 				assert.Equal(t, "l", tree.Value(tree.Root()), "unexpected root node value after deletion")
-				// ensure node metadata has not changed
-				assert.Equal(t, "originally z", tree.Metadata(tree.Root()), "unexpected root node key after deletion")
 			},
 		},
 		"node is root and has two children, successor has right child": {
-			creation: func() *Tree[int, string, string] {
-				tree := New[int, string, string](func(a, b int) bool {
+			creation: func() *Tree[int, string, struct{}] {
+				tree := New[int, string, struct{}](func(a, b int) bool {
 					return a < b
 				})
-				n, _ := tree.Insert(20, "z")
-				tree.SetMetadata(n, "originally z")
-				n, _ = tree.Insert(10, "l")
-				tree.SetMetadata(n, "originally l")
-				n, _ = tree.Insert(30, "y")
-				tree.SetMetadata(n, "originally y")
-				n, _ = tree.Insert(40, "x")
-				tree.SetMetadata(n, "originally x")
+				tree.Insert(20, "z")
+				tree.Insert(10, "l")
+				tree.Insert(30, "y")
+				tree.Insert(40, "x")
 				return tree
 			},
-			deletion: func(tree *Tree[int, string, string]) {
+			deletion: func(tree *Tree[int, string, struct{}]) {
 				n, found := tree.Search(20)
 				require.True(t, found, "expected to find node to be deleted")
 				_, deleted := tree.Delete(n)
 				require.True(t, deleted, "expected node to be deleted")
 			},
-			checks: func(tree *Tree[int, string, string]) {
+			checks: func(tree *Tree[int, string, struct{}]) {
 				// ensure structure as expected
 				assert.True(t, tree.IsNil(tree.Parent(tree.Root())), "expected root node parent to be nil")
 				assert.False(t, tree.IsNil(tree.Left(tree.Root())), "expected root left child to be non-nil")
@@ -322,8 +307,6 @@ func TestTree_Delete(t *testing.T) {
 				// ensure transplants worked as expected
 				assert.Equal(t, 30, tree.Key(tree.Root()), "unexpected root node key after deletion")
 				assert.Equal(t, "y", tree.Value(tree.Root()), "unexpected root node key after deletion")
-				// ensure node metadata has not changed
-				assert.Equal(t, "originally z", tree.Metadata(tree.Root()), "unexpected root node key after deletion")
 				// ensure structure is as expected - left child of root should be 10/l
 				assert.Equal(t, 10, tree.Key(tree.Left(tree.Root())), "unexpected root left child key after deletion")
 				assert.Equal(t, "l", tree.Value(tree.Left(tree.Root())), "unexpected root left child value after deletion")
@@ -335,29 +318,24 @@ func TestTree_Delete(t *testing.T) {
 			},
 		},
 		"node is root and has two children, successor has left child": {
-			creation: func() *Tree[int, string, string] {
-				tree := New[int, string, string](func(a, b int) bool {
+			creation: func() *Tree[int, string, struct{}] {
+				tree := New[int, string, struct{}](func(a, b int) bool {
 					return a < b
 				})
-				n, _ := tree.Insert(20, "z")
-				tree.SetMetadata(n, "originally z")
-				n, _ = tree.Insert(10, "l")
-				tree.SetMetadata(n, "originally l")
-				n, _ = tree.Insert(30, "r")
-				tree.SetMetadata(n, "originally r")
-				n, _ = tree.Insert(25, "y")
-				tree.SetMetadata(n, "originally y")
-				n, _ = tree.Insert(27, "x")
-				tree.SetMetadata(n, "originally x")
+				tree.Insert(20, "z")
+				tree.Insert(10, "l")
+				tree.Insert(30, "r")
+				tree.Insert(25, "y")
+				tree.Insert(27, "x")
 				return tree
 			},
-			deletion: func(tree *Tree[int, string, string]) {
+			deletion: func(tree *Tree[int, string, struct{}]) {
 				n, found := tree.Search(20)
 				require.True(t, found, "expected to find node to be deleted")
 				_, deleted := tree.Delete(n)
 				require.True(t, deleted, "expected node to be deleted")
 			},
-			checks: func(tree *Tree[int, string, string]) {
+			checks: func(tree *Tree[int, string, struct{}]) {
 				// ensure structure as expected
 				assert.True(t, tree.IsNil(tree.Parent(tree.Root())), "expected root node parent to be nil")
 				assert.False(t, tree.IsNil(tree.Left(tree.Root())), "expected root left child to be non-nil")
@@ -365,8 +343,6 @@ func TestTree_Delete(t *testing.T) {
 				// ensure transplants worked as expected
 				assert.Equal(t, 25, tree.Key(tree.Root()), "unexpected root node key after deletion")
 				assert.Equal(t, "y", tree.Value(tree.Root()), "unexpected root node key after deletion")
-				// ensure node metadata has not changed
-				assert.Equal(t, "originally z", tree.Metadata(tree.Root()), "unexpected root node key after deletion")
 				// ensure structure is as expected - left child of root should be 10/l
 				assert.Equal(t, 10, tree.Key(tree.Left(tree.Root())), "unexpected root left child key after deletion")
 				assert.Equal(t, "l", tree.Value(tree.Left(tree.Root())), "unexpected root left child value after deletion")
@@ -382,25 +358,22 @@ func TestTree_Delete(t *testing.T) {
 			},
 		},
 		"node is right child of its parent": {
-			creation: func() *Tree[int, string, string] {
-				tree := New[int, string, string](func(a, b int) bool {
+			creation: func() *Tree[int, string, struct{}] {
+				tree := New[int, string, struct{}](func(a, b int) bool {
 					return a < b
 				})
-				n, _ := tree.Insert(10, "root")
-				tree.SetMetadata(n, "originally root")
-				n, _ = tree.Insert(20, "right")
-				tree.SetMetadata(n, "originally right")
-				n, _ = tree.Insert(30, "right-right")
-				tree.SetMetadata(n, "originally right-right")
+				tree.Insert(10, "root")
+				tree.Insert(20, "right")
+				tree.Insert(30, "right-right")
 				return tree
 			},
-			deletion: func(tree *Tree[int, string, string]) {
+			deletion: func(tree *Tree[int, string, struct{}]) {
 				n, found := tree.Search(20)
 				require.True(t, found, "expected to find node to be deleted")
 				_, deleted := tree.Delete(n)
 				require.True(t, deleted, "expected node to be deleted")
 			},
-			checks: func(tree *Tree[int, string, string]) {
+			checks: func(tree *Tree[int, string, struct{}]) {
 				assert.Equal(t, 10, tree.Key(tree.Root()), "unexpected root node key after deletion")
 				assert.Equal(t, 30, tree.Key(tree.Right(tree.Root())), "unexpected right child key after deletion")
 				assert.True(t, tree.IsNil(tree.Left(tree.Root())), "expected left child to be nil")

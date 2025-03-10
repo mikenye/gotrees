@@ -6,7 +6,9 @@ import (
 	"time"
 )
 
-func TestNode_String(t *testing.T) {
+// TestNode_String_stringer tests that where key, value and metadata types implement fmt.Stringer,
+// their string representation is correctly printed.
+func TestNode_String_stringer(t *testing.T) {
 	d := time.Date(2006, 01, 02, 03, 04, 05, 00, time.UTC)
 	n := &Node[time.Time, time.Time, time.Time]{
 		key:      d,

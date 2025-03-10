@@ -23,8 +23,8 @@ func TestTree_Insert(t *testing.T) {
 	// insert unique keys
 	keys := []int{12, 5, 2, 9, 18, 15, 19, 13, 17, 20}
 	for _, key := range keys {
-		node, updated := tree.Insert(key, key)
-		assert.False(t, updated, "expected updated to be false when inserting unique nodes")
+		node, inserted := tree.Insert(key, key)
+		assert.True(t, inserted, "expected inserted to be true when inserting unique nodes")
 		tree.SetMetadata(node, key)
 		assert.Equal(t, key, tree.Key(node), "expected added node's key to match")
 		assert.Equal(t, key, tree.Value(node), "expected added node's value to match")
@@ -37,8 +37,8 @@ func TestTree_Insert(t *testing.T) {
 	require.NoError(t, tree.IsTreeValid(), "expected valid tree")
 
 	// update duplicate key
-	node, updated := tree.Insert(15, 1515)
-	assert.True(t, updated, "expected updated to be true when inserting duplicate node")
+	node, inserted := tree.Insert(15, 1515)
+	assert.False(t, inserted, "expected inserted to be false when inserting duplicate node")
 	assert.Equal(t, 15, tree.Key(node), "expected added node's key to match")
 	assert.Equal(t, 1515, tree.Value(node), "expected added node's value to match")
 	assert.Equal(t, 15, tree.Metadata(node), "expected added node's metadata to match")

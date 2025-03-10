@@ -10,19 +10,19 @@ The `bst` package provides a **pointer-based Binary Search Tree (BST)** implemen
 
 ## Why This Package Exists
 
-At the time of writing, existing stable BST implementations in Go lacked:
+1. **Generic Support** – Prior to Go generics, existing BST implementations relied on `interface{}`, leading to runtime type assertions and reduced type safety.
+2. **Performance** – By leveraging generics, this implementation avoids the overhead of type assertions and provides efficient operations.
+3. **Learning & Exploration** – This package was developed to deepen the understanding of balanced tree structures, balancing efficiency with usability.
 
-1. **Generic Support** – Pre-generic Go implementations relied on `interface{}`, leading to type assertion overhead.
-2. **Extensibility** – Many BSTs were not designed to be extended into self-balancing tree structures.
-3. **Learning & Exploration** – This package was developed to gain deeper insights into tree structures, balancing efficiency with usability.
+## Generics: `K`, `V` and `M`
 
-## Sentinel Nil Node
-
-This BST uses a **[sentinel nil node](https://en.wikipedia.org/wiki/Sentinel_node)** to represent the absence of a valid node. **Do not compare nodes to `nil` directly** - instead, always use `tree.IsNil(n)` to check whether a node is the sentinel nil node.
+- `K` (**Key type**) – Defines the ordering of nodes. The ordering must be specified by a user-defined **comparison function**.
+- `V` (**Value type**) – The data stored in each node. If no value is needed, `struct{}` can be used for **zero memory overhead**.
+- `M` (**Metadata type**) - The metadata stored in each node. This exists to allow the tree to be extended to other tree types. For example, it could store the color in a Red-Black Tree implementation. If no value is needed, `struct{}` can be used for **zero memory overhead**.
 
 ## Metadata
 
-Each node in the BST contains an optional metadata field (M), which persists with the node across operations. This metadata is transferred to replacement nodes during deletions, ensuring that critical information (such as balancing factors, colors, or aggregated values) is retained as the tree structure evolves.
+Each node in the BST contains an optional metadata field, which is intended to be used when extending the base `Tree` type.
 
 Examples of metadata use cases include:
 
@@ -31,6 +31,10 @@ Examples of metadata use cases include:
 - **Augmented Trees**: Store additional computed values (e.g., subtree sizes, sums).
 
 If metadata is not needed, `struct{}` can be used as the metadata type, ensuring zero memory overhead.
+
+## Sentinel Nil Node
+
+This BST uses a **[sentinel nil node](https://en.wikipedia.org/wiki/Sentinel_node)** to represent the absence of a valid node. **Do not compare nodes to `nil` directly** - instead, **always use `tree.IsNil(n)` to check whether a node is nil.**
 
 ## Installation
 
@@ -64,13 +68,17 @@ tree.TraverseInOrder(tree.Root(), func(n *bst.Node[int, string, struct{}]) bool 
 })
 ```
 
-`TraverseInOrder` uses recursion. If the tree is deep and highly unbalanced, this could lead to stack overflow. Consider using `Tree.Successor` and `Tree.Predecessor` in these cases:
+Note: `TraverseInOrder` uses recursion. If the tree is deep and highly unbalanced, this could lead to a stack overflow. Consider using `Tree.Successor` and `Tree.Predecessor` in these cases:
 
 ```go
 for node := tree.Min(tree.Root); !tree.IsNil(node); node = tree.Successor(node) {
-    fmt.Println(n.Key())
+    fmt.Println(tree.Key(node))
 }
 ```
+
+## Limitations
+- **Not Thread-Safe** – Requires external synchronization for concurrent use.
+- **No Duplicate Keys** – Keys must be unique.
 
 ## Future Enhancements
 - Implement a `BST` interface for swappable tree backends.

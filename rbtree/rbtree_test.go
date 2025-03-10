@@ -7,24 +7,70 @@ import (
 	"testing"
 )
 
-func FuzzTree_Insert(f *testing.F) {
-	f.Add(1, 11, 12, 69, 4, 14, 82, 50, 77, 3)
-	f.Fuzz(func(t *testing.T, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10 int) {
-		// build tree
-		keys := []int{k1, k2, k3, k4, k5, k6, k7, k8, k9, k10}
-		t.Logf("input: %v", keys)
+// FuzzTree inserts 10 nodes and deletes between 1 and 10 of them.
+// Tree structure and validity is checked after each insert and delete.
+func FuzzTree(f *testing.F) {
+	f.Add(1, 11, 12, 69, 4, 14, 82, 50, 77, 3, 10)
+	f.Fuzz(func(t *testing.T, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, deleteKeys int) {
+		if deleteKeys < 0 || deleteKeys > 9 {
+			return
+		}
+
+		// create tree
 		tree := New[int, struct{}](func(a, b int) bool {
 			return a < b
 		})
+
+		// insert nodes
+		keys := []int{k1, k2, k3, k4, k5, k6, k7, k8, k9, k10}
+		t.Logf("input: %v", keys)
 		for _, k := range keys {
+
+			// insert node
 			t.Logf("inserting node: %d", k)
 			tree.Insert(k, struct{}{})
+
+			// check
+			t.Logf("rbtree after insert of node %d:\n%s", k, tree)
+			err := tree.IsTreeValid()
+			if err != nil {
+				t.Error(err)
+			}
 		}
-		t.Logf("rbtree:\n%s", tree)
-		// check
-		err := tree.IsTreeValid()
-		if err != nil {
-			t.Error(err)
+
+		// delete nodes
+		deletedNodes := map[int]struct{}{}
+		for i := 0; i <= deleteKeys; i++ {
+			t.Logf("deleting node: %d", keys[i])
+
+			// has the node already been deleted?
+			_, alreadyDeleted := deletedNodes[keys[i]]
+
+			// search for node
+			n, found := tree.Search(keys[i])
+			if !found && !alreadyDeleted {
+				// if node not found and hasn't already been deleted, something is wrong
+				t.Errorf("node %d not found", keys[i])
+			}
+
+			// delete node
+			deleted := tree.Delete(n)
+			if !deleted && !alreadyDeleted {
+				// if node not deleted and hasn't already been deleted, something is wrong
+				t.Errorf("node %d not deleted", keys[i])
+			}
+
+			// check validity of tree
+			if !alreadyDeleted {
+				t.Logf("rbtree after delete of node %d:\n%s", keys[i], tree)
+				err := tree.IsTreeValid()
+				if err != nil {
+					t.Error(err)
+				}
+			}
+
+			// add deleted node to map set
+			deletedNodes[keys[i]] = struct{}{}
 		}
 	})
 }

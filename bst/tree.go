@@ -1,4 +1,4 @@
-// Package bst provides a generic binary search tree (BST) implementation in Go.
+// Package bst provides a generic binary search tree (BST) implementation.
 //
 // This package allows users to create, manipulate, and traverse binary search trees
 // with customizable key-value pairs and node metadata. The BST maintains order using a user-supplied
@@ -6,8 +6,8 @@
 //
 // # Tree Behavior
 //
-// This implementation **does not** balance itself. If self-balancing behavior is required,
-// consider using an AVL Tree or Red-Black Tree, which can be implemented by extending bst.Tree
+// This implementation does not balance itself. If self-balancing behavior is required,
+// consider using an AVL Tree or Red-Black Tree (see rbtree.Tree), which can be implemented by extending bst.Tree
 // (e.g., for a Red-Black Tree, the node color can be stored in the node metadata).
 //
 // Keys must have strict weak ordering. If keys do not have a strict weak ordering, the behavior is undefined.
@@ -19,17 +19,35 @@
 //
 // # Metadata: Node-Persistent Data
 //
-// Each node in the BST contains an optional metadata field (M), which persists with the node across operations.
-// This metadata is transferred to replacement nodes during deletions, ensuring that critical information
-// (such as balancing factors, colors, or aggregated values) is retained as the tree structure evolves.
+// Each node in the BST contains an optional metadata field, which is intended to be used when extending the base Tree type.
 //
 // Examples of metadata use cases include:
 //
-//   - **Red-Black Trees**: Store the node’s color (Red or Black).
-//   - **AVL Trees**: Store the node’s balance factor.
-//   - **Augmented Trees**: Store additional computed values (e.g., subtree sizes, sums).
+//   - Red-Black Trees: Store the node’s color (Red or Black) - see rbtree.Tree.
+//   - AVL Trees: Store the node’s balance factor.
+//   - Augmented Trees: Store additional computed values (e.g., subtree sizes, sums).
 //
-// If metadata is not needed, `struct{}` can be used as the metadata type, ensuring zero memory overhead.
+// If metadata is not needed, struct{} can be used as the metadata type, ensuring zero memory overhead.
+//
+// # Unsafe Methods
+//
+// The following methods should generally not be used, as they can violate
+// Binary Search Tree properties. However, they are provided to allow developers to extend
+// bst and create specialized trees such as [rbtree.Tree] (a self-balancing Red-Black Tree)
+// or AVL Trees.
+//
+// ⚠️ Warning: Using these methods without proper handling can corrupt the tree structure.
+//
+// The following methods directly modify tree structure and should only be used in extensions:
+//
+//   - [bst.Tree.MustSetMetadata] – Forcefully sets metadata (use with caution).
+//   - [bst.Tree.SetKey] – Changes a node’s key without restructuring the tree (unsafe).
+//   - [bst.Tree.SetLeft] – Directly modifies a node’s left child (violates ordering).
+//   - [bst.Tree.SetMetadata] – Modifies node metadata (safe if used correctly).
+//   - [bst.Tree.SetParent] – Directly sets a node’s parent (can break tree relationships).
+//   - [bst.Tree.SetRight] – Directly modifies a node’s right child (violates ordering).
+//   - [bst.Tree.SetRoot] – Changes the root without ensuring valid tree properties.
+//   - [bst.Tree.Transplant] – Replaces a node without fixup (violates ordering)
 //
 // # Development Notes
 //
@@ -138,7 +156,7 @@ func (t *Tree[K, V, M]) Contains(n *Node[K, V, M]) bool {
 	return found && n == n2
 }
 
-// Delete removes the specified node `n` from the tree.
+// Delete removes the specified node n from the tree.
 //
 // If the deletion is successful, it returns the replacement node (if any) and true.
 // If the node does not exist or is nil, it returns the tree's sentinel nil node and false.
@@ -213,8 +231,8 @@ func (t *Tree[K, V, M]) Depth(n *Node[K, V, M]) int {
 //   - If key already exists, its value is updated instead of creating a duplicate.
 //
 // Returns:
-//   - (*Node[K, V, M], true) if the key existed and the value was updated.
-//   - (*Node[K, V, M], false) if a new node was inserted.
+//   - (*Node[K, V, M], false) if the key existed and the value was updated.
+//   - (*Node[K, V, M], true) if a new node was inserted.
 func (t *Tree[K, V, M]) Insert(key K, value V) (*Node[K, V, M], bool) {
 
 	parent := t.Sentinel() // trailing pointer - parent of current node
@@ -230,7 +248,7 @@ func (t *Tree[K, V, M]) Insert(key K, value V) (*Node[K, V, M], bool) {
 
 			// If key already exists, update the value
 			currNode.value = value
-			return currNode, true
+			return currNode, false
 
 		} else if t.less(key, t.Key(currNode)) {
 
@@ -269,17 +287,17 @@ func (t *Tree[K, V, M]) Insert(key K, value V) (*Node[K, V, M], bool) {
 		t.SetRight(parent, newNode)
 	}
 
-	return newNode, false
+	return newNode, true
 }
 
-// IsFull returns true if the given node `n` has both left and right children.
+// IsFull returns true if the given node n has both left and right children.
 //
 // A full node is one that has exactly two children.
 func (t *Tree[K, V, M]) IsFull(n *Node[K, V, M]) bool {
 	return !t.IsNil(t.Left(n)) && !t.IsNil(t.Right(n))
 }
 
-// IsInternal returns true if the given node `n` is an internal node,
+// IsInternal returns true if the given node n is an internal node,
 // meaning it has at least one child (left or right).
 //
 // Internal nodes are non-leaf nodes that contribute to the tree structure.
@@ -287,7 +305,7 @@ func (t *Tree[K, V, M]) IsInternal(n *Node[K, V, M]) bool {
 	return !t.IsNil(t.Left(n)) || !t.IsNil(t.Right(n))
 }
 
-// IsLeaf returns true if the given node `n` has no children,
+// IsLeaf returns true if the given node n has no children,
 // meaning both its left and right pointers are nil.
 //
 // A leaf node is a terminal node in the tree.
@@ -295,14 +313,14 @@ func (t *Tree[K, V, M]) IsLeaf(n *Node[K, V, M]) bool {
 	return t.IsNil(t.Left(n)) && t.IsNil(t.Right(n))
 }
 
-// IsNil returns true if the given node `n` is the tree's sentinel nil node.
+// IsNil returns true if the given node n is the tree's sentinel nil node.
 //
 // The nil node is used to represent the absence of a real node in the tree.
 func (t *Tree[K, V, M]) IsNil(n *Node[K, V, M]) bool {
 	return n == nil || n == t.Sentinel()
 }
 
-// IsUnary returns true if the given node `n` has exactly one child
+// IsUnary returns true if the given node n has exactly one child
 // (either left or right, but not both).
 //
 // This is determined using a logical XOR operation on the child checks.
@@ -424,6 +442,8 @@ func (t *Tree[K, V, M]) Min(n *Node[K, V, M]) *Node[K, V, M] {
 // for storing auxiliary information such as node color (for Red-Black Trees),
 // balance factors (for AVL Trees), or other user-defined data.
 //
+// This function is intended to be used only when extending bst.Tree.
+//
 // No nil checks are performed. If the node is nil, the function will panic.
 func (t *Tree[K, V, M]) MustSetMetadata(n *Node[K, V, M], metadata M) {
 	n.metadata = metadata
@@ -472,6 +492,8 @@ func (t *Tree[K, V, M]) Root() *Node[K, V, M] {
 // A left rotation moves the node down while promoting its right child.
 // This is commonly used in self-balancing trees (e.g., AVL or Red-Black Trees).
 //
+// This function is intended to be used only when extending bst.Tree.
+//
 // Rotation steps:
 //  1. The right child of the node becomes the new parent of the node.
 //  2. The left child of the node's right subtree becomes the new right child of the node.
@@ -509,6 +531,8 @@ func (t *Tree[K, V, M]) RotateLeft(node *Node[K, V, M]) {
 //
 // A right rotation moves the node down while promoting its left child.
 // This is commonly used in self-balancing trees (e.g., AVL or Red-Black Trees).
+//
+// This function is intended to be used only when extending bst.Tree.
 //
 // Rotation steps:
 //  1. The left child of the node becomes the new parent of the node.
@@ -577,17 +601,28 @@ func (t *Tree[K, V, M]) Search(key K) (*Node[K, V, M], bool) {
 	return t.nil, false
 }
 
-// todo: doc comments
+// Sentinel return the sentinel nil node.
 func (t *Tree[K, V, M]) Sentinel() *Node[K, V, M] {
 	return t.nil
 }
 
-// todo: doc comments + warning - use only when extending the tree
+// SetKey updates the key of the given node **without repositioning it within the tree**.
+//
+// ⚠️ Warning: Changing a node’s key does not update its position, which can violate
+// the BST ordering properties. Use with caution and only when extending bst.Tree.
+//
+// This function is intended for use in specialized cases, such as custom tree extensions.
 func (t *Tree[K, V, M]) SetKey(n *Node[K, V, M], key K) {
 	n.key = key
 }
 
-// todo: doc comments + warning - use only when extending the tree
+// SetLeft updates the left child of the given node.
+//
+// ⚠️ Warning: Changing a node’s child manually can violate the BST ordering properties
+// and break tree invariants. Use with caution** and only when extending bst.Tree.
+//
+// This function is intended for specialized use cases, such as custom tree extensions
+// or self-balancing tree implementations.
 func (t *Tree[K, V, M]) SetLeft(n, l *Node[K, V, M]) {
 	n.left = l
 }
@@ -603,22 +638,40 @@ func (t *Tree[K, V, M]) SetMetadata(n *Node[K, V, M], metadata M) {
 	}
 }
 
-// todo: doc comments + warning - use only when extending the tree
+// SetParent updates the left child of the given node.
+//
+// ⚠️ Warning: Changing a node’s parent manually can violate the BST ordering properties
+// and break tree invariants. Use with caution and only when extending bst.Tree.
+//
+// This function is intended for specialized use cases, such as custom tree extensions
+// or self-balancing tree implementations.
 func (t *Tree[K, V, M]) SetParent(n, p *Node[K, V, M]) {
 	n.parent = p
 }
 
-// todo: doc comments + warning - use only when extending the tree
+// SetRight updates the left child of the given node.
+//
+// ⚠️ Warning: Changing a node’s child manually can violate the BST ordering properties
+// and break tree invariants. Use with caution and only when extending bst.Tree.
+//
+// This function is intended for specialized use cases, such as custom tree extensions
+// or self-balancing tree implementations.
 func (t *Tree[K, V, M]) SetRight(n, r *Node[K, V, M]) {
 	n.right = r
 }
 
-// todo: doc comments + warning - use only when extending the tree
+// SetRoot updates the root of the tree to the given node.
+//
+// ⚠️ Warning: Changing the tree's root manually can violate the BST ordering properties,
+// potentially cause data loss, and break tree invariants. Use with caution and only when extending bst.Tree.
+//
+// This function is intended for specialized use cases, such as custom tree extensions
+// or self-balancing tree implementations.
 func (t *Tree[K, V, M]) SetRoot(n *Node[K, V, M]) {
 	t.root = n
 }
 
-// todo: doc comments + warning - use only when extending the tree
+// SetValue updates the value of the given node n.
 func (t *Tree[K, V, M]) SetValue(n *Node[K, V, M], value V) {
 	n.value = value
 }
@@ -752,8 +805,13 @@ func (t *Tree[K, V, M]) Successor(n *Node[K, V, M]) *Node[K, V, M] {
 	return p
 }
 
-// Transplant replaces node "toReplace" with node "replacement"
-// todo: doc comments + warning - use only when extending the tree
+// Transplant replaces the node `toReplace` with `replacement`, updating parent-child links.
+//
+// ⚠️ Warning: This method does not preserve BST ordering. It only updates tree
+// structure by replacing one subtree with another. Use with caution, and only when
+// implementing advanced tree operations (e.g., deletion, balancing).
+//
+// This function is intended for specialized use cases, such as Red-Black Tree fixup operations.
 func (t *Tree[K, V, M]) Transplant(toReplace, replacement *Node[K, V, M]) {
 
 	// perform transplant

@@ -1,5 +1,7 @@
 # gotrees - Generic Binary Search Trees in Go
 
+[![codecov](https://codecov.io/gh/mikenye/gotrees/graph/badge.svg?token=SXQZZUMRAX)](https://codecov.io/gh/mikenye/gotrees)
+
 ## Overview
 
 **gotrees** is a pure Go implementation of **generic binary search trees**, designed for flexibility and efficiency. It provides:

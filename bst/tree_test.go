@@ -222,6 +222,8 @@ func TestTree_Delete(t *testing.T) {
 			deletion: func(tree *Tree[int, string, struct{}]) {
 				_, deleted := tree.Delete(nil)
 				require.False(t, deleted, "expected nil node to not be deleted")
+				_, deleted = tree.Delete(tree.Sentinel())
+				require.False(t, deleted, "expected nil node to not be deleted")
 			},
 			checks: func(tree *Tree[int, string, struct{}]) {
 				assert.Equal(t, tree.nil, tree.Parent(tree.Root()), "unexpected structure after delete")
@@ -669,24 +671,24 @@ func TestTree_IsTreeValid(t *testing.T) {
 
 	// break sentinel node
 	tree := createTree()
-	tree.nil.parent = nil
+	tree.SetParent(tree.Sentinel(), nil)
 	require.Error(t, tree.IsTreeValid(), "expected sentinel nil parent to return error")
 
 	// break root node
 	tree = createTree()
-	tree.root.parent = nil
+	tree.SetParent(tree.Root(), nil)
 	require.Error(t, tree.IsTreeValid(), "expected root nil parent to return error")
 
 	// break tree: out of order node
 	tree = createTree()
 	minNode := tree.Min(tree.Root())
-	minNode.key = 51
+	tree.SetKey(minNode, 51)
 	require.Error(t, tree.IsTreeValid(), "expected out of order node key to return error")
 
 	// break tree: broken parent/child relationship
 	tree = createTree()
 	brokenNode, _ := tree.Search(75)
-	brokenNode.parent = tree.Root()
+	tree.SetParent(brokenNode, tree.Root())
 	require.Error(t, tree.IsTreeValid(), "expected parent/child mismatch to return error")
 
 }

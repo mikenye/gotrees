@@ -82,6 +82,21 @@ func TestTree_Delete(t *testing.T) {
 		deletion func(t *testing.T, tree *Tree[int, struct{}])
 		checks   func(t *testing.T, tree *Tree[int, struct{}])
 	}{
+		"nil node": {
+			keys: []int{20, 10, 30},
+			deletion: func(t *testing.T, tree *Tree[int, struct{}]) {
+				deleted := tree.Delete(nil)
+				require.False(t, deleted, "expected nil node to not be deleted")
+				deleted = tree.Delete(tree.Sentinel())
+				require.False(t, deleted, "expected nil node to not be deleted")
+			},
+			checks: func(t *testing.T, tree *Tree[int, struct{}]) {
+				assert.Equal(t, tree.Sentinel(), tree.Parent(tree.Root()), "unexpected structure after delete")
+				assert.Equal(t, 20, tree.Key(tree.Root()), "unexpected structure after delete")
+				assert.Equal(t, 10, tree.Key(tree.Left(tree.Root())), "unexpected structure after delete")
+				assert.Equal(t, 30, tree.Key(tree.Right(tree.Root())), "unexpected structure after delete")
+			},
+		},
 		"left child delete, no fixup cases": {
 			keys: []int{14, 11, 69, 3, 12, 50, 82, 1, 4, 77},
 			deletion: func(t *testing.T, tree *Tree[int, struct{}]) {
@@ -602,4 +617,14 @@ func TestTree_panics(t *testing.T) {
 	assert.Panics(t, func() {
 		tree.Transplant()
 	})
+}
+
+func TestTree_Size(t *testing.T) {
+	tree := New[int, struct{}](func(a, b int) bool { return a < b })
+	assert.Equal(t, 0, tree.Size(), "expected empty tree")
+	tree.Insert(10, struct{}{})
+	tree.Insert(5, struct{}{})
+	tree.Insert(15, struct{}{})
+	tree.Insert(14, struct{}{})
+	assert.Equal(t, 4, tree.Size(), "expected 4 nodes in tree")
 }

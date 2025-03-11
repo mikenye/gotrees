@@ -289,8 +289,8 @@ func (t *Tree[K, V]) deleteFixup(x *bst.Node[K, V, Color]) {
 //     to maintain Red-Black Tree properties.
 //
 // Returns:
-// - The inserted or updated node.
-// - true if a new node was inserted, false if an existing node was updated.
+//   - The inserted or updated node.
+//   - true if a new node was inserted, false if an existing node was updated.
 func (t *Tree[K, V]) Insert(key K, value V) (*bst.Node[K, V, Color], bool) {
 	n, updated := t.Tree.Insert(key, value)
 	if !updated {

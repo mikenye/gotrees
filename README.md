@@ -5,8 +5,6 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/mikenye/gotrees.svg)](https://pkg.go.dev/github.com/mikenye/gotrees)
 [![bencher](https://img.shields.io/badge/🐰_bencher-benchmarks-blue)](https://bencher.dev/perf/gotrees/plots)
 
-
-
 ## Overview
 
 **gotrees** is a pure Go implementation of **generic binary search trees**, designed for flexibility and efficiency. It provides:

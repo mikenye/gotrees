@@ -1,6 +1,6 @@
 # Red-Black Binary Search Tree - Go Implementation
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/mikenye/gotrees/rbtree.svg)](https://pkg.go.dev/github.com/mikenye/gotrees/rbtree)
+[![Go Reference](https://pkg.go.dev/badge/github.com/mikenye/gotrees/rbtree.svg)](https://pkg.go.dev/github.com/mikenye/gotrees/rbtree) [![bencher](https://img.shields.io/badge/🐰_bencher-benchmarks-blue)](https://bencher.dev/perf/gotrees/plots)
 
 ## Overview
 

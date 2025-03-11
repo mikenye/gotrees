@@ -1,6 +1,6 @@
 # gotrees - Generic Binary Search Trees in Go
 
-[![codecov](https://codecov.io/gh/mikenye/gotrees/graph/badge.svg?token=SXQZZUMRAX)](https://codecov.io/gh/mikenye/gotrees) [![Go Reference](https://pkg.go.dev/badge/github.com/mikenye/gotrees.svg)](https://pkg.go.dev/github.com/mikenye/gotrees)
+[![codecov](https://codecov.io/gh/mikenye/gotrees/graph/badge.svg?token=SXQZZUMRAX)](https://codecov.io/gh/mikenye/gotrees) [![Go Reference](https://pkg.go.dev/badge/github.com/mikenye/gotrees.svg)](https://pkg.go.dev/github.com/mikenye/gotrees) [![bencher](https://img.shields.io/badge/🐰_bencher-benchmarks-blue)](https://bencher.dev/perf/gotrees/plots)
 
 ## Overview
 

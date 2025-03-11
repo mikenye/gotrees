@@ -1,0 +1,39 @@
+on:
+  push:
+    branches: main
+
+jobs:
+  benchmark_base_branch:
+    name: Continuous Benchmarking with Bencher
+    permissions:
+      checks: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+
+      - name: Install dependencies
+        run: go mod download
+
+      - uses: bencherdev/bencher@main
+      - name: Track base branch benchmarks with Bencher
+        run: |
+          bencher run \
+          --project 9a307619-f4ed-4279-bf54-e22e9a6805ee \
+          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --branch main \
+          --testbed ubuntu-latest \
+          --threshold-measure latency \
+          --threshold-test t_test \
+          --threshold-max-sample-size 64 \
+          --threshold-upper-boundary 0.99 \
+          --thresholds-reset \
+          --err \
+          --adapter go_bench \
+          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+          go test -bench=. -benchmem ./...

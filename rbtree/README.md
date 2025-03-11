@@ -1,5 +1,7 @@
 # Red-Black Binary Search Tree - Go Implementation
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/mikenye/gotrees/rbtree.svg)](https://pkg.go.dev/github.com/mikenye/gotrees/rbtree)
+
 ## Overview
 
 The `rbtree` package provides a **pointer-based Red-Black Binary Search Tree** implementation in Go. It is designed to be:

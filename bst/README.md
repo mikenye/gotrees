@@ -1,5 +1,7 @@
 # Binary Search Tree (BST) - Go Implementation
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/mikenye/gotrees/bst.svg)](https://pkg.go.dev/github.com/mikenye/gotrees/bst)
+
 ## Overview
 
 The `bst` package provides a **pointer-based Binary Search Tree (BST)** implementation in Go. It is designed to be:

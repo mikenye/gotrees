@@ -20,10 +20,8 @@ func TestNode_String_stringer(t *testing.T) {
 		n.String())
 }
 
-// TestNode_String_stringer tests that where key, value and metadata types implement fmt.Stringer,
-// their string representation is correctly printed.
 func TestNode_String_nil(t *testing.T) {
-	n := &Node[int, *string, struct{}]{
+	n := &Node[int, *time.Time, struct{}]{
 		key:      1,
 		value:    nil,
 		metadata: struct{}{},

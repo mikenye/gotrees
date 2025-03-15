@@ -2,6 +2,7 @@ package bst
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -17,6 +18,18 @@ type Node[K, V, M any] struct {
 	value               V
 	parent, left, right *Node[K, V, M]
 	metadata            M
+}
+
+func (n *Node[K, V, M]) IsValueNil() bool {
+	if v := reflect.ValueOf(n.value); (v.Kind() == reflect.Ptr ||
+		v.Kind() == reflect.Interface ||
+		v.Kind() == reflect.Slice ||
+		v.Kind() == reflect.Map ||
+		v.Kind() == reflect.Chan ||
+		v.Kind() == reflect.Func) && v.IsNil() {
+		return true
+	}
+	return false
 }
 
 // String returns a string representation of the node.
@@ -42,14 +55,14 @@ func (n *Node[K, V, M]) String() string {
 	builder.WriteString(": ")
 
 	// write node value
-	if any(n.value) != nil {
+	if n.IsValueNil() {
+		builder.WriteString("<nil>")
+	} else {
 		if s, ok := any(n.value).(fmt.Stringer); ok {
 			builder.WriteString(s.String())
 		} else {
 			builder.WriteString(fmt.Sprintf("%v", n.value))
 		}
-	} else {
-		builder.WriteString("<nil>")
 	}
 
 	// write node metadata

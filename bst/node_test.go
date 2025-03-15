@@ -19,3 +19,14 @@ func TestNode_String_stringer(t *testing.T) {
 		"2006-01-02 03:04:05 +0000 UTC: 2006-01-02 03:04:05 +0000 UTC [2006-01-02 03:04:05 +0000 UTC]",
 		n.String())
 }
+
+func TestNode_String_nil(t *testing.T) {
+	n := &Node[int, *time.Time, struct{}]{
+		key:      1,
+		value:    nil,
+		metadata: struct{}{},
+	}
+	assert.Equal(t,
+		"1: <nil> [{}]",
+		n.String())
+}

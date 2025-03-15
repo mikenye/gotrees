@@ -42,10 +42,14 @@ func (n *Node[K, V, M]) String() string {
 	builder.WriteString(": ")
 
 	// write node value
-	if s, ok := any(n.value).(fmt.Stringer); ok {
-		builder.WriteString(s.String())
+	if any(n.value) != nil {
+		if s, ok := any(n.value).(fmt.Stringer); ok {
+			builder.WriteString(s.String())
+		} else {
+			builder.WriteString(fmt.Sprintf("%v", n.value))
+		}
 	} else {
-		builder.WriteString(fmt.Sprintf("%v", n.value))
+		builder.WriteString("<nil>")
 	}
 
 	// write node metadata

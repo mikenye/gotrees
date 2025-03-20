@@ -32,6 +32,8 @@
 //   - [bst.Tree.TraverseInOrder]: In-order traversal.
 //   - [bst.Tree.Min]: Returns the node with the smallest key.
 //   - [bst.Tree.Max]: Returns the node with the largest key.
+//   - [bst.Tree.Floor]: Returns the largest node with key ≤ given key.
+//   - [bst.Tree.Ceiling]: Returns the smallest node with key ≥ given key.
 //   - [bst.Tree.IsNil]: Checks if a node is the sentinel nil node.
 //   - [bst.Tree.Parent]: Returns the parent of a node.
 //

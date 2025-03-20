@@ -195,3 +195,101 @@ func ExampleTree_Predecessor_traversal() {
 	// Node with key 1 has value one (and color: ⬛)
 	// Node with key 0 has value zero (and color: ⬛)
 }
+
+func ExampleTree_Floor() {
+	// Create a tree with even numbers
+	tree := bst.New[int, string, struct{}](func(a, b int) bool {
+		return a < b
+	})
+
+	tree.Insert(2, "two")
+	tree.Insert(4, "four")
+	tree.Insert(6, "six")
+	tree.Insert(8, "eight")
+	tree.Insert(10, "ten")
+
+	// Find floor value for various inputs
+
+	// Exact match
+	if node, found := tree.Floor(6); found {
+		fmt.Printf("Floor(6) = %d: %s\n", tree.Key(node), tree.Value(node))
+	} else {
+		fmt.Println("Floor(6) not found")
+	}
+
+	// Floor value for an odd number (finds the next lower value)
+	if node, found := tree.Floor(7); found {
+		fmt.Printf("Floor(7) = %d: %s\n", tree.Key(node), tree.Value(node))
+	} else {
+		fmt.Println("Floor(7) not found")
+	}
+
+	// Floor value for a value smaller than the minimum
+	if node, found := tree.Floor(1); found {
+		fmt.Printf("Floor(1) = %d: %s\n", tree.Key(node), tree.Value(node))
+	} else {
+		fmt.Println("Floor(1) not found")
+	}
+
+	// Floor value for a value larger than the maximum
+	if node, found := tree.Floor(12); found {
+		fmt.Printf("Floor(12) = %d: %s\n", tree.Key(node), tree.Value(node))
+	} else {
+		fmt.Println("Floor(12) not found")
+	}
+
+	// Output:
+	// Floor(6) = 6: six
+	// Floor(7) = 6: six
+	// Floor(1) not found
+	// Floor(12) = 10: ten
+}
+
+func ExampleTree_Ceiling() {
+	// Create a tree with even numbers
+	tree := bst.New[int, string, struct{}](func(a, b int) bool {
+		return a < b
+	})
+
+	tree.Insert(2, "two")
+	tree.Insert(4, "four")
+	tree.Insert(6, "six")
+	tree.Insert(8, "eight")
+	tree.Insert(10, "ten")
+
+	// Find ceiling value for various inputs
+
+	// Exact match
+	if node, found := tree.Ceiling(6); found {
+		fmt.Printf("Ceiling(6) = %d: %s\n", tree.Key(node), tree.Value(node))
+	} else {
+		fmt.Println("Ceiling(6) not found")
+	}
+
+	// Ceiling value for an odd number (finds the next higher value)
+	if node, found := tree.Ceiling(5); found {
+		fmt.Printf("Ceiling(5) = %d: %s\n", tree.Key(node), tree.Value(node))
+	} else {
+		fmt.Println("Ceiling(5) not found")
+	}
+
+	// Ceiling value for a value smaller than the minimum
+	if node, found := tree.Ceiling(1); found {
+		fmt.Printf("Ceiling(1) = %d: %s\n", tree.Key(node), tree.Value(node))
+	} else {
+		fmt.Println("Ceiling(1) not found")
+	}
+
+	// Ceiling value for a value larger than the maximum
+	if node, found := tree.Ceiling(12); found {
+		fmt.Printf("Ceiling(12) = %d: %s\n", tree.Key(node), tree.Value(node))
+	} else {
+		fmt.Println("Ceiling(12) not found")
+	}
+
+	// Output:
+	// Ceiling(6) = 6: six
+	// Ceiling(5) = 6: six
+	// Ceiling(1) = 2: two
+	// Ceiling(12) not found
+}

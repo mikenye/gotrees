@@ -82,3 +82,45 @@ func ExampleTree_Delete() {
 	//  │    ╭── 8: eight [🟥]
 	//  ╰── 10: ten [⬛]
 }
+
+func ExampleTree_Floor_and_Ceiling() {
+	// Create a red-black tree with even numbers
+	tree := rbtree.New[int, string](func(a, b int) bool {
+		return a < b
+	})
+
+	tree.Insert(2, "two")
+	tree.Insert(4, "four")
+	tree.Insert(6, "six")
+	tree.Insert(8, "eight")
+	tree.Insert(10, "ten")
+
+	// Using inherited Floor and Ceiling methods from bst.Tree
+
+	// Find the closest values to 5
+	floorNode, floorFound := tree.Floor(5)
+	ceilingNode, ceilingFound := tree.Ceiling(5)
+
+	if floorFound {
+		fmt.Printf("Floor(5) = %d: %s\n", tree.Key(floorNode), tree.Value(floorNode))
+	} else {
+		fmt.Println("Floor(5) not found")
+	}
+
+	if ceilingFound {
+		fmt.Printf("Ceiling(5) = %d: %s\n", tree.Key(ceilingNode), tree.Value(ceilingNode))
+	} else {
+		fmt.Println("Ceiling(5) not found")
+	}
+
+	// Using Floor and Ceiling to implement a range query for keys between 3 and 7
+	for node, found := tree.Ceiling(3); found && tree.Key(node) <= 7; node = tree.Successor(node) {
+		fmt.Printf("Key in range [3,7]: %d\n", tree.Key(node))
+	}
+
+	// Output:
+	// Floor(5) = 4: four
+	// Ceiling(5) = 6: six
+	// Key in range [3,7]: 4
+	// Key in range [3,7]: 6
+}

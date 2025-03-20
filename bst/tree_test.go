@@ -856,3 +856,123 @@ func TestTree_Contains(t *testing.T) {
 	assert.False(t, treeA.Contains(nB), "node from tree B should not exist in node A")
 	assert.True(t, treeB.Contains(nB), "expected to find node B in tree B")
 }
+
+func TestTree_Floor(t *testing.T) {
+	tree := New[int, string, struct{}](func(a, b int) bool {
+		return a < b
+	})
+
+	// Test with empty tree
+	n, found := tree.Floor(5)
+	assert.False(t, found, "Floor in empty tree should return not found")
+	assert.True(t, tree.IsNil(n), "Floor in empty tree should return nil node")
+
+	// Insert some values
+	tree.Insert(10, "ten")
+	tree.Insert(5, "five")
+	tree.Insert(15, "fifteen")
+	tree.Insert(3, "three")
+	tree.Insert(7, "seven")
+	tree.Insert(12, "twelve")
+	tree.Insert(17, "seventeen")
+
+	// Test exact matches
+	n, found = tree.Floor(10)
+	assert.True(t, found, "Floor for existing key should be found")
+	assert.Equal(t, 10, tree.Key(n), "Floor(10) should return node with key 10")
+	assert.Equal(t, "ten", tree.Value(n), "Floor(10) should return node with value 'ten'")
+
+	// Test where floor is less than key
+	n, found = tree.Floor(6)
+	assert.True(t, found, "Floor(6) should find a node")
+	assert.Equal(t, 5, tree.Key(n), "Floor(6) should return node with key 5")
+	assert.Equal(t, "five", tree.Value(n), "Floor(6) should return node with value 'five'")
+
+	// Test where floor is less than smallest key
+	n, found = tree.Floor(2)
+	assert.False(t, found, "Floor(2) should not find a node")
+	assert.True(t, tree.IsNil(n), "Floor(2) should return nil node")
+
+	// Test where floor is largest key
+	n, found = tree.Floor(20)
+	assert.True(t, found, "Floor(20) should find a node")
+	assert.Equal(t, 17, tree.Key(n), "Floor(20) should return node with key 17")
+	assert.Equal(t, "seventeen", tree.Value(n), "Floor(20) should return node with value 'seventeen'")
+}
+
+func TestTree_Ceiling(t *testing.T) {
+	tree := New[int, string, struct{}](func(a, b int) bool {
+		return a < b
+	})
+
+	// Test with empty tree
+	n, found := tree.Ceiling(5)
+	assert.False(t, found, "Ceiling in empty tree should return not found")
+	assert.True(t, tree.IsNil(n), "Ceiling in empty tree should return nil node")
+
+	// Insert some values
+	tree.Insert(10, "ten")
+	tree.Insert(5, "five")
+	tree.Insert(15, "fifteen")
+	tree.Insert(3, "three")
+	tree.Insert(7, "seven")
+	tree.Insert(12, "twelve")
+	tree.Insert(17, "seventeen")
+
+	// Test exact matches
+	n, found = tree.Ceiling(10)
+	assert.True(t, found, "Ceiling for existing key should be found")
+	assert.Equal(t, 10, tree.Key(n), "Ceiling(10) should return node with key 10")
+	assert.Equal(t, "ten", tree.Value(n), "Ceiling(10) should return node with value 'ten'")
+
+	// Test where ceiling is greater than key
+	n, found = tree.Ceiling(6)
+	assert.True(t, found, "Ceiling(6) should find a node")
+	assert.Equal(t, 7, tree.Key(n), "Ceiling(6) should return node with key 7")
+	assert.Equal(t, "seven", tree.Value(n), "Ceiling(6) should return node with value 'seven'")
+
+	// Test where ceiling is smallest key
+	n, found = tree.Ceiling(1)
+	assert.True(t, found, "Ceiling(1) should find a node")
+	assert.Equal(t, 3, tree.Key(n), "Ceiling(1) should return node with key 3")
+	assert.Equal(t, "three", tree.Value(n), "Ceiling(1) should return node with value 'three'")
+
+	// Test where key is larger than largest in tree
+	n, found = tree.Ceiling(20)
+	assert.False(t, found, "Ceiling(20) should not find a node")
+	assert.True(t, tree.IsNil(n), "Ceiling(20) should return nil node")
+}
+
+// TestTree_UncoveredSetMethods tests the uncovered set methods
+func TestTree_UncoveredSetMethods(t *testing.T) {
+	tree := New[int, string, struct{}](func(a, b int) bool {
+		return a < b
+	})
+
+	// Create a test node
+	node, _ := tree.Insert(10, "original value")
+
+	// Test SetValue
+	tree.SetValue(node, "new value")
+	assert.Equal(t, "new value", tree.Value(node), "SetValue should update the node's value")
+
+	// Test SetLeft and SetRight
+	leftNode, _ := tree.Insert(5, "left")
+	rightNode, _ := tree.Insert(15, "right")
+
+	// Save original relationships
+	originalLeft := node.left
+	originalRight := node.right
+
+	// Manually change the relationships with SetLeft and SetRight
+	tree.SetLeft(node, rightNode) // Intentionally incorrect for testing
+	tree.SetRight(node, leftNode) // Intentionally incorrect for testing
+
+	// Verify the changes took effect
+	assert.Equal(t, rightNode, tree.Left(node), "SetLeft should update the node's left child")
+	assert.Equal(t, leftNode, tree.Right(node), "SetRight should update the node's right child")
+
+	// Restore original structure to avoid affecting other tests
+	tree.SetLeft(node, originalLeft)
+	tree.SetRight(node, originalRight)
+}

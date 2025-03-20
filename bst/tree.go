@@ -239,7 +239,7 @@ func (t *Tree[K, V, M]) Insert(key K, value V) (*Node[K, V, M], bool) {
 		// update trailing pointer
 		parent = currNode
 
-		if !t.less(currNode.key, key) && !t.less(key, currNode.key) {
+		if t.keysEqual(currNode.key, key) {
 
 			// If key already exists, update the value
 			currNode.value = value
@@ -582,7 +582,7 @@ func (t *Tree[K, V, M]) Search(key K) (*Node[K, V, M], bool) {
 	for currNode != t.nil {
 
 		// if we've found the matching node, return it
-		if !t.less(currNode.key, key) && !t.less(key, currNode.key) {
+		if t.keysEqual(currNode.key, key) {
 			return currNode, true
 		}
 
@@ -875,4 +875,89 @@ func (t *Tree[K, V, M]) TraverseInOrder(n *Node[K, V, M], f TraversalFunc[K, V, 
 // This function retrieves the stored value for the node's key.
 func (t *Tree[K, V, M]) Value(n *Node[K, V, M]) V {
 	return n.value
+}
+
+// keysEqual determines if two keys are equal by using the less function.
+//
+// Two keys are considered equal if neither is less than the other.
+//
+// This is a helper method that improves performance by avoiding duplicate calls to the less function.
+func (t *Tree[K, V, M]) keysEqual(a, b K) bool {
+	return !t.less(a, b) && !t.less(b, a)
+}
+
+// Floor finds the largest key in the tree less than or equal to key.
+//
+// Returns:
+//   - (*Node[K, V, M], true) if a key ≤ key exists in the tree.
+//   - (nil, false) if no such key exists.
+func (t *Tree[K, V, M]) Floor(key K) (*Node[K, V, M], bool) {
+	if t.IsNil(t.root) {
+		return t.nil, false
+	}
+
+	var floor *Node[K, V, M] = t.nil
+	current := t.root
+
+	for !t.IsNil(current) {
+		// If current key equals the search key, we found an exact match
+		if t.keysEqual(current.key, key) {
+			return current, true
+		}
+
+		// If current key is greater than search key, go left
+		if t.less(key, current.key) {
+			current = current.left
+		} else {
+			// If current key is less than search key, this is a potential floor value
+			// Update floor and continue searching in the right subtree for larger values
+			floor = current
+			current = current.right
+		}
+	}
+
+	// If we found a floor value, return it
+	if !t.IsNil(floor) {
+		return floor, true
+	}
+
+	return t.nil, false
+}
+
+// Ceiling finds the smallest key in the tree greater than or equal to key.
+//
+// Returns:
+//   - (*Node[K, V, M], true) if a key ≥ key exists in the tree.
+//   - (nil, false) if no such key exists.
+func (t *Tree[K, V, M]) Ceiling(key K) (*Node[K, V, M], bool) {
+	if t.IsNil(t.root) {
+		return t.nil, false
+	}
+
+	var ceiling *Node[K, V, M] = t.nil
+	current := t.root
+
+	for !t.IsNil(current) {
+		// If current key equals the search key, we found an exact match
+		if t.keysEqual(current.key, key) {
+			return current, true
+		}
+
+		// If current key is less than search key, go right
+		if t.less(current.key, key) {
+			current = current.right
+		} else {
+			// If current key is greater than search key, this is a potential ceiling value
+			// Update ceiling and continue searching in the left subtree for smaller values
+			ceiling = current
+			current = current.left
+		}
+	}
+
+	// If we found a ceiling value, return it
+	if !t.IsNil(ceiling) {
+		return ceiling, true
+	}
+
+	return t.nil, false
 }

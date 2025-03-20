@@ -181,7 +181,7 @@ func (t *Tree[K, V]) Delete(z *bst.Node[K, V, Color]) bool {
 	if t.isBlack(y) {
 		t.deleteFixup(x)
 	}
-	t.resetSentinel()
+	t.resetSentinelNodeProperties()
 	t.size--
 	return true
 }
@@ -208,7 +208,9 @@ func (t *Tree[K, V]) deleteFixup(x *bst.Node[K, V, Color]) {
 			w := t.Right(t.Parent(x))
 			if t.isRed(w) {
 
-				// case 1
+				// Case 1: Sibling w is red
+				// Convert to case 2, 3, or 4 by recoloring and rotating
+				// This increases the black height of x's subtree
 				t.setColor(w, Black)
 				t.setColor(t.Parent(x), Red)
 				t.Tree.RotateLeft(t.Parent(x))
@@ -217,23 +219,29 @@ func (t *Tree[K, V]) deleteFixup(x *bst.Node[K, V, Color]) {
 			}
 			if t.isBlack(t.Left(w)) && t.isBlack(t.Right(w)) {
 
-				// case 2
+				// Case 2: Sibling w is black and both of its children are black
+				// Make sibling red to balance the black height
+				// Move the double-black problem up the tree to the parent
 				t.setColor(w, Red)
 				x = t.Parent(x)
-				//t.Tree.SetParent(x, t.Parent(t.Parent(z)))
 
 			} else {
 
 				if t.isBlack(t.Right(w)) {
 
-					// case 3
+					// Case 3: Sibling w is black, its left child is red, right child is black
+					// Transform to case 4 by recoloring and right rotation
+					// This moves the red color to the far side (right child)
 					t.setColor(t.Left(w), Black)
 					t.setColor(w, Red)
 					t.Tree.RotateRight(w)
 					w = t.Right(t.Parent(x))
 				}
 
-				// case 4
+				// Case 4: Sibling w is black and its right child is red
+				// Final resolution - fix the double-black problem completely
+				// Copy parent's color to sibling, make parent and sibling's right child black
+				// Left rotate to rebalance, then set x to root to exit the loop
 				t.setColor(w, t.Metadata(t.Parent(x)))
 				t.setColor(t.Parent(x), Black)
 				t.setColor(t.Right(w), Black)
@@ -242,12 +250,15 @@ func (t *Tree[K, V]) deleteFixup(x *bst.Node[K, V, Color]) {
 			}
 		} else {
 
-			// same as above but with right and left exchanged
+			// Mirror of the above cases with right and left exchanged
+			// The logic is the same but the directions are reversed
 
 			w := t.Left(t.Parent(x))
 			if t.isRed(w) {
 
-				// case 1
+				// Case 1 (mirrored): Sibling w is red
+				// Convert to case 2, 3, or 4 by recoloring and rotating
+				// This increases the black height of x's subtree
 				t.setColor(w, Black)
 				t.setColor(t.Parent(x), Red)
 				t.Tree.RotateRight(t.Parent(x))
@@ -256,23 +267,29 @@ func (t *Tree[K, V]) deleteFixup(x *bst.Node[K, V, Color]) {
 			}
 			if t.isBlack(t.Right(w)) && t.isBlack(t.Left(w)) {
 
-				// case 2
+				// Case 2 (mirrored): Sibling w is black and both of its children are black
+				// Make sibling red to balance the black height
+				// Move the double-black problem up the tree to the parent
 				t.setColor(w, Red)
 				x = t.Parent(x)
-				//t.Tree.SetParent(x, t.Parent(t.Parent(z)))
 
 			} else {
 
 				if t.isBlack(t.Left(w)) {
 
-					// case 3
+					// Case 3 (mirrored): Sibling w is black, its right child is red, left child is black
+					// Transform to case 4 by recoloring and left rotation
+					// This moves the red color to the far side (left child)
 					t.setColor(t.Right(w), Black)
 					t.setColor(w, Red)
 					t.Tree.RotateLeft(w)
 					w = t.Left(t.Parent(x))
 				}
 
-				// case 4
+				// Case 4 (mirrored): Sibling w is black and its left child is red
+				// Final resolution - fix the double-black problem completely
+				// Copy parent's color to sibling, make parent and sibling's left child black
+				// Right rotate to rebalance, then set x to root to exit the loop
 				t.setColor(w, t.Metadata(t.Parent(x)))
 				t.setColor(t.Parent(x), Black)
 				t.setColor(t.Left(w), Black)
@@ -445,7 +462,7 @@ func (t *Tree[K, V]) MustSetMetadata() {
 	panic(fmt.Errorf("MustSetMetadata should not be called on an rbtree.Tree, doing so may corrupt the tree"))
 }
 
-// resetSentinel re-initializes the sentinel nil node to maintain Red-Black Tree invariants.
+// resetSentinelNodeProperties re-initializes the sentinel nil node to maintain Red-Black Tree invariants.
 //
 // In a Red-Black Tree, the sentinel node serves as a placeholder for all nil references.
 //
@@ -454,8 +471,8 @@ func (t *Tree[K, V]) MustSetMetadata() {
 //   - Has itself as its parent (ensuring a valid reference).
 //   - Is always Black (as required by Red-Black Tree rules).
 //
-// This function should be called after deletions to maintain consistency.
-func (t *Tree[K, V]) resetSentinel() {
+// This function should be called after deletions to prevent corruption of the sentinel node's state.
+func (t *Tree[K, V]) resetSentinelNodeProperties() {
 	t.Tree.SetLeft(t.Sentinel(), nil)
 	t.Tree.SetRight(t.Sentinel(), nil)
 	t.Tree.SetParent(t.Sentinel(), t.Sentinel())

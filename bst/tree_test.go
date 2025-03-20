@@ -942,3 +942,37 @@ func TestTree_Ceiling(t *testing.T) {
 	assert.False(t, found, "Ceiling(20) should not find a node")
 	assert.True(t, tree.IsNil(n), "Ceiling(20) should return nil node")
 }
+
+// TestTree_UncoveredSetMethods tests the uncovered set methods
+func TestTree_UncoveredSetMethods(t *testing.T) {
+	tree := New[int, string, struct{}](func(a, b int) bool {
+		return a < b
+	})
+
+	// Create a test node
+	node, _ := tree.Insert(10, "original value")
+
+	// Test SetValue
+	tree.SetValue(node, "new value")
+	assert.Equal(t, "new value", tree.Value(node), "SetValue should update the node's value")
+
+	// Test SetLeft and SetRight
+	leftNode, _ := tree.Insert(5, "left")
+	rightNode, _ := tree.Insert(15, "right")
+
+	// Save original relationships
+	originalLeft := node.left
+	originalRight := node.right
+
+	// Manually change the relationships with SetLeft and SetRight
+	tree.SetLeft(node, rightNode) // Intentionally incorrect for testing
+	tree.SetRight(node, leftNode) // Intentionally incorrect for testing
+
+	// Verify the changes took effect
+	assert.Equal(t, rightNode, tree.Left(node), "SetLeft should update the node's left child")
+	assert.Equal(t, leftNode, tree.Right(node), "SetRight should update the node's right child")
+
+	// Restore original structure to avoid affecting other tests
+	tree.SetLeft(node, originalLeft)
+	tree.SetRight(node, originalRight)
+}
